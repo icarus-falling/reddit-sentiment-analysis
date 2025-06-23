@@ -1,0 +1,6 @@
+fastapi
+jinja2
+praw
+boto3
+python-dotenv
+uvicorn

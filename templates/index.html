@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reddit Sentiment Analysis</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+        th {
+            background-color: #ecf0f1;
+        }
+        form {
+            margin-bottom: 30px;
+        }
+        input[type="text"] {
+            padding: 8px;
+            width: 400px;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #chart-container {
+            max-width: 1000px;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Reddit Sentiment Analysis</h1>
+
+    <form method="post">
+        <input type="text" name="keyword" placeholder="Enter keywords (e.g., AI, climate change)" required>
+        <button type="submit">Analyze</button>
+    </form>
+
+    {% if results %}
+        <h2>Latest Analysis</h2>
+        <table>
+            <tr>
+                <th>#</th>
+                <th>Post Title</th>
+                <th>Sentiment</th>
+                <th>Score</th>
+                <th>Keyword</th>
+                <th>Timestamp</th>
+            </tr>
+            {% for row in results %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ row.title }}</td>
+                <td>{{ row.sentiment }}</td>
+                <td>{{ row.score }}</td>
+                <td>{{ row.keyword }}</td>
+                <td>{{ row.timestamp }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        <div id="chart-container">
+            {% if sentiment_counts %}
+                <h2>Sentiment Distribution</h2>
+                <canvas id="sentimentChart"></canvas>
+            {% endif %}
+
+            {% if trend_data %}
+                <h2>Sentiment Score Trends Over Time</h2>
+                <canvas id="trendChart"></canvas>
+            {% endif %}
+        </div>
+
+        <script>
+            // Sentiment Distribution Chart
+            const labels = JSON.parse('{{ sentiment_counts.keys() | list | tojson | safe }}');
+            const data = JSON.parse('{{ sentiment_counts.values() | list | tojson | safe }}');
+
+            new Chart(document.getElementById('sentimentChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Count',
+                        data: data,
+                        backgroundColor: ['#2ecc71', '#e74c3c', '#f1c40f', '#3498db']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
+            });
+
+            // Sentiment Trend Over Time Chart
+            const trendData = JSON.parse(`{{ trend_data | tojson | safe }}`);
+            const trendLabels = Object.values(trendData)[0]?.timestamps || [];
+
+            const trendDatasets = Object.entries(trendData).map(([keyword, data]) => ({
+                label: keyword,
+                data: data.scores,
+                fill: false,
+                borderColor: '#' + Math.floor(Math.random()*16777215).toString(16),
+                tension: 0.3
+            }));
+
+            new Chart(document.getElementById('trendChart'), {
+                type: 'line',
+                data: {
+                    labels: trendLabels,
+                    datasets: trendDatasets
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Timestamp' },
+                            ticks: { maxRotation: 45, minRotation: 45 }
+                        },
+                        y: {
+                            title: { display: true, text: 'Sentiment Score' },
+                            min: 0,
+                            max: 1
+                        }
+                    }
+                }
+            });
+        </script>
+    {% else %}
+        <p>No data available. Try searching for a keyword above.</p>
+    {% endif %}
+</body>
+</html>
